@@ -1,96 +1,94 @@
-import React, { Component } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { getMetricMetaInfo, timeToString } from '../utils/helpers';
-import UdaciSlider from './UdaciSlider';
-import UdaciSteppers from './UdaciSteppers';
-import DateHeader from './DateHeader';
-import TextButton from './TextButton';
-import { Ionicons } from '@expo/vector-icons';
-import { submitEntry, removeEntry } from '../utils/api.js';
+import React, { Component } from 'react'
+import { ScrollView, View, TouchableOpacity, Text } from 'react-native'
+import {
+  getMetricMetaInfo,
+  timeToString,
+  getDailyReminderValue
+} from '../utils/helpers'
+import UdaciSlider from './UdaciSlider'
+import UdaciSteppers from './UdaciSteppers'
+import DateHeader from './DateHeader'
+import { Ionicons } from '@expo/vector-icons'
+import TextButton from './TextButton'
+import { submitEntry, removeEntry } from '../utils/api'
+import { connect } from 'react-redux'
+import { addEntry } from '../actions'
 
-function SubmitBtn({ onPress }) {
+function SubmitBtn ({ onPress }) {
   return (
     <TouchableOpacity
       onPress={onPress}>
-      <Text>Submit</Text>
+        <Text>SUBMIT</Text>
     </TouchableOpacity>
   )
 }
 
-export default class AddEntry extends Component {
-
+class AddEntry extends Component {
   state = {
     run: 0,
     bike: 0,
     swim: 0,
     sleep: 0,
-    eat: 0
+    eat: 0,
   }
-
   increment = (metric) => {
     const { max, step } = getMetricMetaInfo(metric)
 
     this.setState((state) => {
-      const count = state[metric] + step;
+      const count = state[metric] + step
 
       return {
         ...state,
-        [metric]: count > max ? max : count
+        [metric]: count > max ? max : count,
       }
     })
   }
-
   decrement = (metric) => {
-
     this.setState((state) => {
-      const count = state[metric] - getMetricMetaInfo(metric).step;
+      const count = state[metric] - getMetricMetaInfo(metric).step
 
       return {
         ...state,
-        [metric]: count < 0 ? 0 : count
+        [metric]: count < 0 ? 0 : count,
       }
     })
   }
-
   slide = (metric, value) => {
     this.setState(() => ({
       [metric]: value
     }))
   }
-
   submit = () => {
-    const key = timeToString();
-    const entry = this.state;
+    const key = timeToString()
+    const entry = this.state
 
-    // Update Redux
-    this.setState(() => ({
-      run: 0,
-      bike: 0,
-      swim: 0,
-      sleep: 0,
-      eat: 0
-    }));
+    this.props.dispatch(addEntry({
+      [key]: entry
+    }))
+
+    this.setState(() => ({ run: 0, bike: 0, swim: 0, sleep: 0, eat: 0 }))
 
     // Navigate to home
 
-    submitEntry({ key, entry });
+    submitEntry({ key, entry })
 
     // Clear local notification
   }
-
   reset = () => {
-    const key = timeToString;
+    const key = timeToString()
 
-    // Update Redux
+    this.props.dispatch(addEntry({
+      [key]: getDailyReminderValue()
+    }))
 
-    // Route to home
-    removeEntry(key);
+    // Route to Home
+
+    removeEntry(key)
   }
-
   render() {
-    const metaInfo = getMetricMetaInfo();
+    const metaInfo = getMetricMetaInfo()
 
-    if (true) {
+    if (this.props.alreadyLogged) {
       return (
         <View>
           <Ionicons
@@ -106,12 +104,11 @@ export default class AddEntry extends Component {
     }
 
     return (
-      <View>
-        <DateHeader date={(new Date()).toLocaleDateString()} />
-        <Text>{JSON.stringify(this.state)}</Text>
+      <ScrollView>
+        <DateHeader date={(new Date()).toLocaleDateString()}/>
         {Object.keys(metaInfo).map((key) => {
-          const { getIcon, type, ...rest } = metaInfo[key];
-          const value = this.state[key];
+          const { getIcon, type, ...rest } = metaInfo[key]
+          const value = this.state[key]
 
           return (
             <View key={key}>
@@ -131,8 +128,18 @@ export default class AddEntry extends Component {
             </View>
           )
         })}
-        <SubmitBtn onPress={this.submit}/>
-      </View>
+        <SubmitBtn onPress={this.submit} />
+      </ScrollView>
     )
   }
 }
+
+function mapStateToProps (state) {
+  const key = timeToString()
+
+  return {
+    alreadyLogged: state[key] && typeof state[key].today === 'undefined'
+  }
+}
+
+export default connect(mapStateToProps)(AddEntry)
